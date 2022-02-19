@@ -1,13 +1,8 @@
 import glob
 import os
 from _utils.audio_handler import AudioHandler
-import scipy
 from scipy.io import wavfile
 import pickle
-from tqdm import tqdm
-import copy
-import subprocess
-from multiprocessing import Pool
 
 
 def cross_check_existence(audio_fname_list, mesh_fname_list):
