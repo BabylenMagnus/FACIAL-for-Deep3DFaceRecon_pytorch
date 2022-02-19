@@ -6,14 +6,15 @@ import pandas as pd
 from scipy.signal import savgol_filter
 import argparse
 import os
+import glob
+from scipy.io import loadmat
 
 
 parser = argparse.ArgumentParser(description='fit_headpose_setting')
 parser.add_argument('--csv_path', type=str,
                     default='/content/FACIAL/video_preprocess/train1_openface/train1_512_audio.csv')
-parser.add_argument('--deepface_path', type=str,
-                    default='/content/FACIAL/video_preprocess/train1_deep3Dface/train1.npz')
 parser.add_argument('--save_path', type=str, default='/content/FACIAL/video_preprocess/train1_posenew.npz')
+
 opt = parser.parse_args()
 
 # --- 1. load model
@@ -24,33 +25,41 @@ kpt_ind = face_model.key_points
 triangles = face_model.tri
 
 csv_path = opt.csv_path
-csvinfo = pd.read_csv(csv_path)
-num_image = len(csvinfo)
-base = int(csvinfo.iloc[0]['frame']) - 1
-deepface_path = opt.deepface_path
+csv_info = pd.read_csv(csv_path)
+num_image = len(csv_info)
+base = int(csv_info.iloc[0]['frame']) - 1
 save_path = opt.save_path
 
-path = '/content/FACIAL/video_preprocess/train1_deep3Dface/'
+param_folder = '/content/FACIAL/video_preprocess/train1_deep3Dface/'
+mat_path_list = sorted(glob.glob(os.path.join(param_folder, '*.mat')))
+len_mat = len(mat_path_list)
 
-id_params = np.load(os.path.join(path, 'id_train1.npz'))
-tex_params = np.load(os.path.join(path, 'tex_train1.npz'))
-gamma_params = np.load(os.path.join(path, 'gamma_train1.npz'))
-exp_params = np.load(os.path.join(path, 'exp_train1.npz'))
+id_params = np.zeros((len_mat, 80), float)
+tex_params = np.zeros((len_mat, 80), float)
+gamma_params = np.zeros((len_mat, 27), float)
+exp_params = np.zeros((len_mat, 64), float)
+
+for i in range(1, len_mat + 1):
+    item = loadmat(os.path.join(param_folder, f'{i:06}.mat'))
+    id_params[i - 1, :] = item['id']
+    tex_params[i - 1, :] = item['tex']
+    gamma_params[i - 1, :] = item['gamma']
+    exp_params[i - 1, :] = item['exp']
+
 
 h = 512
 w = 512
 
 headpose = np.zeros((num_image, 258), dtype=np.float32)
-base = int(csvinfo.iloc[0]['frame']) - 1
 # --- 2. fit head pose for each frame
 for frame_count in range(1, num_image + 1):
     if frame_count % 1000 == 0:
         print(frame_count)
-    subcsvinfo = csvinfo[csvinfo['frame'] == frame_count + base]
+    sub_csv_info = csv_info[csv_info['frame'] == frame_count + base]
     x = np.zeros((68, 2), dtype=np.float32)
     for i in range(68):
-        x[i, 0] = subcsvinfo.iloc[0][' x_' + str(i)] - w / 2
-        x[i, 1] = (h - subcsvinfo.iloc[0][' y_' + str(i)]) - h / 2 - 1
+        x[i, 0] = sub_csv_info.iloc[0][' x_' + str(i)] - w / 2
+        x[i, 1] = (h - sub_csv_info.iloc[0][' y_' + str(i)]) - h / 2 - 1
     X_ind = kpt_ind
 
     fitted_sp, fitted_ep, fitted_s, fitted_R, fitted_t = fit_points(
@@ -65,7 +74,6 @@ for frame_count in range(1, num_image + 1):
     headpose[frame_count - 1, :] = params
 
 # additional smooth
-headpose1 = np.zeros((num_image, 258), dtype=np.float32)
-headpose1 = savgol_filter(headpose, 5, 3, axis=0)
+headpose = savgol_filter(headpose, 5, 3, axis=0)
 
-np.savez(save_path, face=headpose1)
+np.savez(save_path, face=headpose)

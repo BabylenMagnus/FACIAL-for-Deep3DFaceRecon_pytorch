@@ -68,7 +68,7 @@ def transfer_bfm09():
 
     # our face model is cropped align face landmarks which contains only 35709 vertex.
     # original BFM09 contains 53490 vertex, and expression basis provided by JuYong contains 53215 vertex.
-    # thus we select corresponding vertex to get our face model.
+    # thus, we select corresponding vertex to get our face model.
 
     index_exp = loadmat('BFM/BFM_front_idx.mat')
     index_exp = index_exp['idx'].astype(np.int32) - 1  # starts from 0 (to 53215)
@@ -112,7 +112,7 @@ def transfer_bfm09():
         'BFM/BFM_model_front.mat',
         {
             'meanshape': mean_shape, 'meantex': meantex, 'idBase': id_base, 'exBase': ex_base, 'texBase': tex_base,
-             'tri': tri, 'point_buf': point_buf, 'tri_mask2': tri_mask2, 'keypoints': key_points,
+            'tri': tri, 'point_buf': point_buf, 'tri_mask2': tri_mask2, 'keypoints': key_points,
             'frontmask2_idx': front_mask2_idx, 'skinmask': skin_mask
         }
     )

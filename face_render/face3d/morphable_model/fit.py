@@ -53,37 +53,37 @@ Inference:
 '''
 
 
-def estimate_shape(x, shapeMU, shapePC, expression, s, R, t2d, lamb=3000):
-    '''
+def estimate_shape(x, shape_mu, shape_pc, expression, s, r, t2d, lamb=3000):
+    """
     Args:
         x: (2, n). image points (to be fitted)
-        shapeMU: (3n, 1)
-        shapePC: (3n, n_sp)
+        shape_mu: (3n, 1)
+        shape_pc: (3n, n_sp)
         shapeEV: (n_sp, 1)
         expression: (3, n)
         s: scale
-        R: (3, 3). rotation matrix
+        r: (3, 3). rotation matrix
         t2d: (2,). 2d translation
-        lambda: regulation coefficient
+        lamb: regulation coefficient
 
     Returns:
         shape_para: (n_sp, 1) shape parameters(coefficients)
-    '''
+    """
     x = x.copy()
-    assert (shapeMU.shape[0] == shapePC.shape[0])
-    assert (shapeMU.shape[0] == x.shape[1] * 3)
+    assert (shape_mu.shape[0] == shape_pc.shape[0])
+    assert (shape_mu.shape[0] == x.shape[1] * 3)
 
-    dof = shapePC.shape[1]
+    dof = shape_pc.shape[1]
 
     n = x.shape[1]
     # sigma = shapeEV
-    sigma = np.ones((shapePC.shape[1], 1), dtype=np.float32)
+    sigma = np.ones((shape_pc.shape[1], 1), dtype=np.float32)
     t2d = np.array(t2d)
     P = np.array([[1, 0, 0], [0, 1, 0]], dtype=np.float32)
-    A = s * P.dot(R)
+    A = s * P.dot(r)
 
     # --- calc pc
-    pc_3d = np.resize(shapePC.T, [dof, n, 3])  # 199 x n x 3
+    pc_3d = np.resize(shape_pc.T, [dof, n, 3])  # 199 x n x 3
     pc_3d = np.reshape(pc_3d, [dof * n, 3])
     pc_2d = pc_3d.dot(A.T.copy())  # 199 x n x 2
 
@@ -91,7 +91,7 @@ def estimate_shape(x, shapeMU, shapePC, expression, s, R, t2d, lamb=3000):
 
     # --- calc b
     # shapeMU
-    mu_3d = np.resize(shapeMU, [n, 3]).T  # 3 x n
+    mu_3d = np.resize(shape_mu, [n, 3]).T  # 3 x n
     # expression
     exp_3d = expression
     # 
@@ -109,7 +109,7 @@ def estimate_shape(x, shapeMU, shapePC, expression, s, R, t2d, lamb=3000):
 
 
 def estimate_expression(x, shapeMU, expPC, shape, s, R, t2d, lamb=2000):
-    '''
+    """
     Args:
         x: (2, n). image points (to be fitted)
         shapeMU: (3n, 1)
@@ -123,7 +123,7 @@ def estimate_expression(x, shapeMU, expPC, shape, s, R, t2d, lamb=2000):
 
     Returns:
         exp_para: (n_ep, 1) shape parameters(coefficients)
-    '''
+    """
     x = x.copy()
     assert (shapeMU.shape[0] == expPC.shape[0])
     assert (shapeMU.shape[0] == x.shape[1] * 3)
@@ -163,8 +163,9 @@ def estimate_expression(x, shapeMU, expPC, shape, s, R, t2d, lamb=2000):
 
 
 def fit_points(x, X_ind, model, id_coeff, n_ep, max_iter=4):
-    '''
+    """
     Args:
+        id_coeff:
         x: (n, 2) image points
         X_ind: (n,) corresponding Model vertex indices
         model: 3DMM
@@ -173,7 +174,7 @@ def fit_points(x, X_ind, model, id_coeff, n_ep, max_iter=4):
         sp: (n_sp, 1). shape parameters
         ep: (n_ep, 1). exp parameters
         s, R, t
-    '''
+    """
     x = x.copy().T
 
     # -- init
@@ -218,7 +219,7 @@ def fit_points(x, X_ind, model, id_coeff, n_ep, max_iter=4):
 
 # ---------------- fit
 def fit_points1(x, X_ind, model, n_sp, n_ep, max_iter=4):
-    '''
+    """
     Args:
         x: (n, 2) image points
         X_ind: (n,) corresponding Model vertex indices
@@ -228,7 +229,7 @@ def fit_points1(x, X_ind, model, n_sp, n_ep, max_iter=4):
         sp: (n_sp, 1). shape parameters
         ep: (n_ep, 1). exp parameters
         s, R, t
-    '''
+    """
     x = x.copy().T
 
     # -- init
@@ -271,7 +272,7 @@ def fit_points1(x, X_ind, model, n_sp, n_ep, max_iter=4):
 
 # ---------------- fitting process
 def fit_points_for_show(x, X_ind, model, id_coeff, n_ep, max_iter=4):
-    '''
+    """
     Args:
         x: (n, 2) image points
         X_ind: (n,) corresponding Model vertex indices
@@ -281,7 +282,7 @@ def fit_points_for_show(x, X_ind, model, id_coeff, n_ep, max_iter=4):
         sp: (n_sp, 1). shape parameters
         ep: (n_ep, 1). exp parameters
         s, R, t
-    '''
+    """
     x = x.copy().T
 
     # -- init
@@ -300,35 +301,35 @@ def fit_points_for_show(x, X_ind, model, id_coeff, n_ep, max_iter=4):
     expPC = model.exBase[valid_ind, :n_ep]
 
     s = 50
-    R = mesh.transform.angle2matrix([0, 0, 0])
+    r = mesh.transform.angle2matrix([0, 0, 0])
     t = [0, 0, 0]
-    lsp = [];
-    lep = [];
-    ls = [];
-    lR = [];
+    lsp = []
+    lep = []
+    ls = []
+    lR = []
     lt = []
     for i in range(max_iter):
         X = shapeMU + shapePC.dot(sp) + expPC.dot(ep)
         X = np.reshape(X, [int(len(X) / 3), 3]).T
-        lsp.append(sp);
-        lep.append(ep);
-        ls.append(s), lR.append(R), lt.append(t)
+        lsp.append(sp)
+        lep.append(ep)
+        ls.append(s), lR.append(r), lt.append(t)
 
         # ----- estimate pose
-        P = mesh.transform.estimate_affine_matrix_3d22d(X.T, x.T)
-        s, R, t = mesh.transform.P2sRt(P)
-        lsp.append(sp);
-        lep.append(ep);
-        ls.append(s), lR.append(R), lt.append(t)
+        p = mesh.transform.estimate_affine_matrix_3d22d(X.T, x.T)
+        s, r, t = mesh.transform.P2sRt(p)
+        lsp.append(sp)
+        lep.append(ep)
+        ls.append(s), lR.append(r), lt.append(t)
 
         # ----- estimate shape
         # expression
         shape = shapePC.dot(sp)
         shape = np.reshape(shape, [int(len(shape) / 3), 3]).T
-        ep = estimate_expression(x, shapeMU, expPC, shape, s, R, t[:2], lamb=1)
-        lsp.append(sp);
-        lep.append(ep);
-        ls.append(s), lR.append(R), lt.append(t)
+        ep = estimate_expression(x, shapeMU, expPC, shape, s, r, t[:2], lamb=1)
+        lsp.append(sp)
+        lep.append(ep)
+        ls.append(s), lR.append(r), lt.append(t)
 
         # shape
         # expression = expPC.dot(ep)
