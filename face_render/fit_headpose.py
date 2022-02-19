@@ -34,16 +34,14 @@ param_folder = '/content/FACIAL/video_preprocess/train1_deep3Dface/'
 mat_path_list = sorted(glob.glob(os.path.join(param_folder, '*.mat')))
 len_mat = len(mat_path_list)
 
-id_params = np.zeros((len_mat, 80), float)
-tex_params = np.zeros((len_mat, 80), float)
-gamma_params = np.zeros((len_mat, 27), float)
-exp_params = np.zeros((len_mat, 64), float)
+item = loadmat(os.path.join(param_folder, f'{1:06}.mat'))
+id_params = item['id']
+tex_params = item['tex']
+gamma_params = item['gamma']
 
+exp_params = np.zeros((len_mat, 64), float)
 for i in range(1, len_mat + 1):
     item = loadmat(os.path.join(param_folder, f'{i:06}.mat'))
-    id_params[i - 1, :] = item['id']
-    tex_params[i - 1, :] = item['tex']
-    gamma_params[i - 1, :] = item['gamma']
     exp_params[i - 1, :] = item['exp']
 
 
@@ -63,7 +61,7 @@ for frame_count in range(1, num_image + 1):
     X_ind = kpt_ind
 
     fitted_sp, fitted_ep, fitted_s, fitted_R, fitted_t = fit_points(
-        x, X_ind, face_model, np.expand_dims(id_params, 0), n_ep=n_exp_para, max_iter=10
+        x, X_ind, face_model, np.expand_dims(id_params, 0), n_ep=face_model.exBase.shape[1], max_iter=10
     )
 
     fitted_angles = mesh.transform.matrix2angle(fitted_R)
