@@ -17,11 +17,11 @@ parser.add_argument('--save_path', type=str, default='/content/FACIAL/video_prep
 opt = parser.parse_args()
 
 # --- 1. load model
-facemodel = BFM()
-n_exp_para = facemodel.exBase.shape[1]
+face_model = BFM()
+n_exp_para = face_model.exBase.shape[1]
 
-kpt_ind = facemodel.keypoints
-triangles = facemodel.tri
+kpt_ind = face_model.key_points
+triangles = face_model.tri
 
 csv_path = opt.csv_path
 csvinfo = pd.read_csv(csv_path)
@@ -54,7 +54,7 @@ for frame_count in range(1, num_image + 1):
     X_ind = kpt_ind
 
     fitted_sp, fitted_ep, fitted_s, fitted_R, fitted_t = fit_points(
-        x, X_ind, facemodel, np.expand_dims(id_params, 0), n_ep=n_exp_para, max_iter=10
+        x, X_ind, face_model, np.expand_dims(id_params, 0), n_ep=n_exp_para, max_iter=10
     )
 
     fitted_angles = mesh.transform.matrix2angle(fitted_R)

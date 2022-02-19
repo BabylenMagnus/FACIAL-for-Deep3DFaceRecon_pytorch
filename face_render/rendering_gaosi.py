@@ -83,13 +83,13 @@ def render(facemodel, chi):
 
     gamma = np.expand_dims(facemodel.gamma, 0)
 
-    vertices = facemodel.meanshape.T + facemodel.idBase.dot(fitted_sp) + expression1
+    vertices = facemodel.mean_shape.T + facemodel.idBase.dot(fitted_sp) + expression1
     vertices = np.reshape(vertices, [int(3), int(len(vertices) / 3)], 'F').T
 
     face_norm = Compute_norm(np.expand_dims(vertices, 0), facemodel)
     face_norm_r = np.matmul(face_norm, np.expand_dims(fitted_R, 0))
 
-    colors = facemodel.meantex.T + facemodel.texBase.dot(tex_coeff)
+    colors = facemodel.mean_tex.T + facemodel.texBase.dot(tex_coeff)
     colors = np.reshape(colors, [int(3), int(len(colors) / 3)], 'F').T
 
     face_color, lighting = Illumination_layer(np.expand_dims(colors, 0), face_norm_r, gamma)
@@ -157,7 +157,7 @@ n_shape_para = facemodel.idBase.shape[1]
 n_exp_para = facemodel.exBase.shape[1]
 n_tex_para = facemodel.texBase.shape[1]
 
-kpt_ind = facemodel.keypoints
+kpt_ind = facemodel.key_points
 triangles = facemodel.tri
 
 facemodel.sp = idparams
