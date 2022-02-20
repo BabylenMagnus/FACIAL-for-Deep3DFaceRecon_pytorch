@@ -19,16 +19,13 @@ opt = parser.parse_args()
 
 # --- 1. load model
 face_model = BFM()
-n_exp_para = face_model.exBase.shape[1]
 
-kpt_ind = face_model.key_points
-triangles = face_model.tri
+X_ind = face_model.key_points
 
 csv_path = opt.csv_path
 csv_info = pd.read_csv(csv_path)
 num_image = len(csv_info)
 base = int(csv_info.iloc[0]['frame']) - 1
-save_path = opt.save_path
 
 param_folder = '/content/FACIAL/video_preprocess/train1_deep3Dface/'
 mat_path_list = sorted(glob.glob(os.path.join(param_folder, '*.mat')))
@@ -44,7 +41,6 @@ for i in range(1, len_mat + 1):
     item = loadmat(os.path.join(param_folder, f'{i:06}.mat'))
     exp_params[i - 1, :] = item['exp']
 
-
 h = 512
 w = 512
 
@@ -58,20 +54,19 @@ for frame_count in range(1, num_image + 1):
     for i in range(68):
         x[i, 0] = sub_csv_info.iloc[0][' x_' + str(i)] - w / 2
         x[i, 1] = (h - sub_csv_info.iloc[0][' y_' + str(i)]) - h / 2 - 1
-    X_ind = kpt_ind
 
     fitted_sp, fitted_ep, fitted_s, fitted_R, fitted_t = fit_points(
-        x, X_ind, face_model, np.expand_dims(id_params, 0), n_ep=face_model.exBase.shape[1], max_iter=10
+        x, X_ind, face_model, id_params, n_ep=face_model.exBase.shape[1], max_iter=10
     )
 
     fitted_angles = mesh.transform.matrix2angle(fitted_R)
     fitted_angles = np.array([fitted_angles])
 
     chi_prev = np.concatenate((fitted_angles[0, :], [fitted_s], fitted_t, exp_params[frame_count - 1]), axis=0)
-    params = np.concatenate((chi_prev, id_params, tex_params, gamma_params), axis=0)
+    params = np.concatenate((chi_prev, id_params[0], tex_params[0], gamma_params[0]), axis=0)
     headpose[frame_count - 1, :] = params
 
 # additional smooth
 headpose = savgol_filter(headpose, 5, 3, axis=0)
 
-np.savez(save_path, face=headpose)
+np.savez(opt.save_path, face=headpose)
