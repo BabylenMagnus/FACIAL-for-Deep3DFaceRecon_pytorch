@@ -5,6 +5,11 @@ from face3d import mesh
 from load_data import BFM
 import argparse
 
+# input:
+#   video_preprocess/train1_posenew.npz
+# output:
+#   video_preprocess/train_A
+
 parser = argparse.ArgumentParser(description='Render_setting')
 parser.add_argument('--real_params_path', type=str, default='../video_preprocess/train1_posenew.npz')
 parser.add_argument('--outpath', type=str, default='../video_preprocess/train_A/')

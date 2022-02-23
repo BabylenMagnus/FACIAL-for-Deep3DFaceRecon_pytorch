@@ -9,11 +9,16 @@ import os
 import glob
 from scipy.io import loadmat
 
+# input:
+#   video_preprocess/train1_openface/train1_512_audio.csv
+#   video_preprocess/train1_deep3Dface/.mat
+# output:
+#   ../video_preprocess/train1_posenew.npz
 
 parser = argparse.ArgumentParser(description='fit_headpose_setting')
 parser.add_argument('--csv_path', type=str,
-                    default='/content/FACIAL/video_preprocess/train1_openface/train1_512_audio.csv')
-parser.add_argument('--save_path', type=str, default='/content/FACIAL/video_preprocess/train1_posenew.npz')
+                    default='../video_preprocess/train1_openface/train1_512_audio.csv')
+parser.add_argument('--save_path', type=str, default='../video_preprocess/train1_posenew.npz')
 
 opt = parser.parse_args()
 
@@ -27,7 +32,7 @@ csv_info = pd.read_csv(csv_path)
 num_image = len(csv_info)
 base = int(csv_info.iloc[0]['frame']) - 1
 
-param_folder = '/content/FACIAL/video_preprocess/train1_deep3Dface/'
+param_folder = '../video_preprocess/train1_deep3Dface/'
 mat_path_list = sorted(glob.glob(os.path.join(param_folder, '*.mat')))
 len_mat = len(mat_path_list)
 

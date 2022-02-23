@@ -7,7 +7,7 @@ import os
 
 # define face_model for reconstruction
 class BFM:
-    def __init__(self, model_path='/content/FACIAL/face_render/BFM/'):
+    def __init__(self, model_path='../face_render/BFM/'):
         model = loadmat(os.path.join(model_path, 'BFM_model_front.mat'))
         self.expEV = np.loadtxt(os.path.join(model_path, 'std_exp.txt'))
         self.mean_shape = model['meanshape']  # mean face shape

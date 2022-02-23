@@ -1,4 +1,4 @@
-'''
+"""
 Max-Planck-Gesellschaft zur Foerderung der Wissenschaften e.V. (MPG) is holder of all proprietary rights on this
 computer program.
 
@@ -13,12 +13,12 @@ All rights reserved.
 
 More information about VOCA is available at http://voca.is.tue.mpg.de.
 For comments or questions, please email us at voca@tue.mpg.de
-'''
+"""
 import os
+
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 os.environ['CUDA_VISIBLE_DEVICES'] = '1'
 
-import re
 import copy
 import resampy
 import numpy as np
@@ -42,6 +42,7 @@ def interpolate_features(features, input_rate, output_rate, output_len=None):
                                              input_timestamps,
                                              features[:, feat])
     return output_features
+
 
 class AudioHandler:
     def __init__(self, config):
@@ -98,11 +99,11 @@ class AudioHandler:
             raise ValueError('Wrong type for audio')
 
         # Load graph and place_hoders
-        with tf.gfile.GFile(self.config['deepspeech_graph_fname'], "rb") as f:
-            graph_def = tf.GraphDef()
+        with tf.io.gfile.GFile(self.config['deepspeech_graph_fname'], "rb") as f:
+            graph_def = tf.compat.v1.GraphDef()
             graph_def.ParseFromString(f.read())
 
-        graph = tf.get_default_graph()
+        graph = tf.compat.v1.get_default_graph()
         tf.import_graph_def(graph_def, name="deepspeech")
         input_tensor = graph.get_tensor_by_name('deepspeech/input_node:0')
         seq_length = graph.get_tensor_by_name('deepspeech/input_lengths:0')
@@ -128,11 +129,11 @@ class AudioHandler:
                                                                   seq_length: [input_vector.shape[0]]})
 
                     if fps == 30:
-                    # Resample network output from 50 fps to 60 fps
+                        # Resample network output from 50 fps to 60 fps
                         audio_len_s = float(audio_sample.shape[0]) / sample_rate
                         num_frames = int(round(audio_len_s * 30))
                         network_output = interpolate_features(network_output[:, 0], 50, 30,
-                                                            output_len=num_frames)
+                                                              output_len=num_frames)
                     else:
                         network_output = network_output.squeeze()
 
@@ -140,11 +141,11 @@ class AudioHandler:
                     zero_pad = np.zeros((int(self.audio_window_size / 2), network_output.shape[1]))
                     network_output = np.concatenate((zero_pad, network_output, zero_pad), axis=0)
                     windows = []
-                    for window_index in range(0, network_output.shape[0] - self.audio_window_size, self.audio_window_stride):
+                    for window_index in range(0, network_output.shape[0] - self.audio_window_size,
+                                              self.audio_window_stride):
                         windows.append(network_output[window_index:window_index + self.audio_window_size])
 
                     processed_audio[subj][seq]['audio'] = np.array(windows)
 
-        tf.reset_default_graph() 
+        tf.reset_default_graph()
         return processed_audio
-
