@@ -1,5 +1,5 @@
 from options.test_options import TestOptions
-from data.data_loader import CreateDataLoader
+from data.data_loader import create_data_loader
 from models.models import create_model
 import util.util as util
 import cv2
@@ -14,7 +14,7 @@ opt.batchSize = 1  # test code only supports batchSize = 1
 opt.serial_batches = True  # no shuffle
 opt.no_flip = True  # no flip
 
-data_loader = CreateDataLoader(opt)
+data_loader = create_data_loader(opt)
 dataset = data_loader.load_data()
 dataset_size = len(data_loader)
 print('#test images = %d' % dataset_size)
@@ -29,16 +29,17 @@ if not os.path.exists(img_root):
     os.makedirs(img_root)
 
 for i, data in enumerate(dataset):
-    print(i)
+    if not i % 50:
+        print(i)
     label = data['label']
     cur_frame = model.inference(label)
     prev_frame = cur_frame.data[0]
 
     if i + 7 <= len(dataset):
-        frameindex = (i + 7)
+        frame_index = (i + 7)
     else:
-        frameindex = i + 7 - len(dataset)
-    imsave(img_root + '/{:06d}.jpg'.format(frameindex), util.tensor2im(prev_frame))
+        frame_index = i + 7 - len(dataset)
+    imsave(img_root + '/{:06d}.jpg'.format(frame_index), util.tensor2im(prev_frame))
 
 fps = 30
 

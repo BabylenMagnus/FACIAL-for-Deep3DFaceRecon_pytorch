@@ -2,20 +2,21 @@ import os
 import argparse
 import numpy as np
 from skimage import io
-from face3d import mesh
+from face3d.mesh import transform, render as mesh_render
 from load_data import BFM
 
 parser = argparse.ArgumentParser(description='Render_setting')
 parser.add_argument('--train_params_path', type=str, default='../audio2face/data/train3.npz')
 parser.add_argument('--net_params_path', type=str, default='../examples/test-result/obama2.npz')
+parser.add_argument('--BFM_model_path', type=str, default='/content/FACIAL/face_render/BFM/')
 parser.add_argument('--outpath', type=str, default='../examples/rendering/')
 
 opt = parser.parse_args()
 
 
-def Compute_norm(face_shape, facemodel):
-    face_id = facemodel.tri  # vertex index for each triangle face, with shape [F,3], F is number of faces
-    point_id = facemodel.point_buf  # adjacent face index for each vertex, with shape [N,8], N is number of vertex
+def compute_norm(face_shape, face_model):
+    face_id = face_model.tri  # vertex index for each triangle face, with shape [F,3], F is number of faces
+    point_id = face_model.point_buf  # adjacent face index for each vertex, with shape [N,8], N is number of vertex
     shape = face_shape
     face_id = (face_id - 1).astype(np.int32)
     point_id = (point_id - 1).astype(np.int32)
@@ -33,7 +34,7 @@ def Compute_norm(face_shape, facemodel):
     return v_norm
 
 
-def Illumination_layer(face_texture, norm, gamma):
+def illumination_layer(face_texture, norm, gamma):
     num_vertex = np.shape(face_texture)[1]
 
     init_lit = np.array([0.8, 0, 0, 0, 0, 0, 0, 0, 0])
@@ -47,21 +48,21 @@ def Illumination_layer(face_texture, norm, gamma):
     c1 = np.sqrt(3.0) / np.sqrt(4 * np.pi)
     c2 = 3 * np.sqrt(5.0) / np.sqrt(12 * np.pi)
 
-    Y0 = np.tile(np.reshape(a0 * c0, [1, 1, 1]), [1, num_vertex, 1])
-    Y1 = np.reshape(-a1 * c1 * norm[:, :, 1], [1, num_vertex, 1])
-    Y2 = np.reshape(a1 * c1 * norm[:, :, 2], [1, num_vertex, 1])
-    Y3 = np.reshape(-a1 * c1 * norm[:, :, 0], [1, num_vertex, 1])
-    Y4 = np.reshape(a2 * c2 * norm[:, :, 0] * norm[:, :, 1], [1, num_vertex, 1])
-    Y5 = np.reshape(-a2 * c2 * norm[:, :, 1] * norm[:, :, 2], [1, num_vertex, 1])
-    Y6 = np.reshape(a2 * c2 * 0.5 / np.sqrt(3.0) * (3 * np.square(norm[:, :, 2]) - 1), [1, num_vertex, 1])
-    Y7 = np.reshape(-a2 * c2 * norm[:, :, 0] * norm[:, :, 2], [1, num_vertex, 1])
-    Y8 = np.reshape(a2 * c2 * 0.5 * (np.square(norm[:, :, 0]) - np.square(norm[:, :, 1])), [1, num_vertex, 1])
+    y0 = np.tile(np.reshape(a0 * c0, [1, 1, 1]), [1, num_vertex, 1])
+    y1 = np.reshape(-a1 * c1 * norm[:, :, 1], [1, num_vertex, 1])
+    y2 = np.reshape(a1 * c1 * norm[:, :, 2], [1, num_vertex, 1])
+    y3 = np.reshape(-a1 * c1 * norm[:, :, 0], [1, num_vertex, 1])
+    y4 = np.reshape(a2 * c2 * norm[:, :, 0] * norm[:, :, 1], [1, num_vertex, 1])
+    y5 = np.reshape(-a2 * c2 * norm[:, :, 1] * norm[:, :, 2], [1, num_vertex, 1])
+    y6 = np.reshape(a2 * c2 * 0.5 / np.sqrt(3.0) * (3 * np.square(norm[:, :, 2]) - 1), [1, num_vertex, 1])
+    y7 = np.reshape(-a2 * c2 * norm[:, :, 0] * norm[:, :, 2], [1, num_vertex, 1])
+    y8 = np.reshape(a2 * c2 * 0.5 * (np.square(norm[:, :, 0]) - np.square(norm[:, :, 1])), [1, num_vertex, 1])
 
-    Y = np.concatenate([Y0, Y1, Y2, Y3, Y4, Y5, Y6, Y7, Y8], axis=2)
+    y = np.concatenate([y0, y1, y2, y3, y4, y5, y6, y7, y8], axis=2)
 
-    lit_r = np.squeeze(np.matmul(Y, np.expand_dims(gamma[:, 0, :], 2)), 2)
-    lit_g = np.squeeze(np.matmul(Y, np.expand_dims(gamma[:, 1, :], 2)), 2)
-    lit_b = np.squeeze(np.matmul(Y, np.expand_dims(gamma[:, 2, :], 2)), 2)
+    lit_r = np.squeeze(np.matmul(y, np.expand_dims(gamma[:, 0, :], 2)), 2)
+    lit_g = np.squeeze(np.matmul(y, np.expand_dims(gamma[:, 1, :], 2)), 2)
+    lit_b = np.squeeze(np.matmul(y, np.expand_dims(gamma[:, 2, :], 2)), 2)
 
     face_color = np.stack([lit_r * face_texture[:, :, 0], lit_g * face_texture[:, :, 1], lit_b * face_texture[:, :, 2]],
                           axis=2)
@@ -70,48 +71,48 @@ def Illumination_layer(face_texture, norm, gamma):
     return face_color, lighting
 
 
-def render(facemodel, chi):
-    fitted_R = mesh.transform.angle2matrix(chi[0:3])
+def render(face_model, chi):
+    fitted_r = transform.angle2matrix(chi[0:3])
 
     fitted_s = chi[3]
     fitted_t = chi[4:7].copy()
     fitted_t[2] = 1.0
     fitted_ep = np.expand_dims(chi[7:71], 1)
-    fitted_sp = np.expand_dims(facemodel.sp, 1)
-    tex_coeff = np.expand_dims(facemodel.tex, 1)
-    expression1 = facemodel.exBase.dot(fitted_ep)
+    fitted_sp = np.expand_dims(face_model.sp, 1)
+    tex_coeff = np.expand_dims(face_model.tex, 1)
+    expression1 = face_model.exBase.dot(fitted_ep)
 
-    gamma = np.expand_dims(facemodel.gamma, 0)
+    gamma = np.expand_dims(face_model.gamma, 0)
 
-    vertices = facemodel.mean_shape.T + facemodel.idBase.dot(fitted_sp) + expression1
+    vertices = face_model.mean_shape.T + face_model.idBase.dot(fitted_sp) + expression1
     vertices = np.reshape(vertices, [int(3), int(len(vertices) / 3)], 'F').T
 
-    face_norm = Compute_norm(np.expand_dims(vertices, 0), facemodel)
-    face_norm_r = np.matmul(face_norm, np.expand_dims(fitted_R, 0))
+    face_norm = compute_norm(np.expand_dims(vertices, 0), face_model)
+    face_norm_r = np.matmul(face_norm, np.expand_dims(fitted_r, 0))
 
-    colors = facemodel.mean_tex.T + facemodel.texBase.dot(tex_coeff)
+    colors = face_model.mean_tex.T + face_model.texBase.dot(tex_coeff)
     colors = np.reshape(colors, [int(3), int(len(colors) / 3)], 'F').T
 
-    face_color, lighting = Illumination_layer(np.expand_dims(colors, 0), face_norm_r, gamma)
+    face_color, lighting = illumination_layer(np.expand_dims(colors, 0), face_norm_r, gamma)
     colors = face_color[0, :]
     colors = np.minimum(np.maximum(colors, 0), 255)
-    transformed_vertices = mesh.transform.similarity_transform(vertices, fitted_s, fitted_R, fitted_t)
+    transformed_vertices = transform.similarity_transform(vertices, fitted_s, fitted_r, fitted_t)
     projected_vertices = transformed_vertices.copy()  # using stantard camera & orth projection
 
     h = 512
     w = 512
 
     colors[mask3, :] = 255.0
-    image_vertices = mesh.transform.to_image(projected_vertices, h, w)
-    image = mesh.render.render_colors(image_vertices, triangles - 1, colors, h, w)
+    image_vertices = transform.to_image(projected_vertices, h, w)
+    image = mesh_render.render_colors(image_vertices, triangles - 1, colors, h, w)
     return image
 
 
 def gen_gaosi_filter(r, sigma):
-    GaussTemp = np.ones(r * 2 - 1)
+    gauss_temp = np.ones(r * 2 - 1)
     for i in range(0, r * 2 - 1):
-        GaussTemp[i] = np.exp(-(i - r) ** 2 / (2 * sigma ** 2)) / (sigma * np.sqrt(2 * 3.1415926))
-    return GaussTemp
+        gauss_temp[i] = np.exp(-(i - r) ** 2 / (2 * sigma ** 2)) / (sigma * np.sqrt(2 * 3.1415926))
+    return gauss_temp
 
 
 mask3 = np.load('eyemask.npy')
@@ -143,38 +144,40 @@ from scipy.signal import savgol_filter
 
 netparams = savgol_filter(netparams, 7, 3, axis=0)
 
-# np.savez(opt.net_params_path, face = netparams)
-
 idparams = realparams[0, 71:151]
 texparams = realparams[0, 151:231]
-gammaparams = realparams[0, 231:]
+gamma_params = realparams[0, 231:]
 
 # --- 1. load model
-facemodel = BFM()
-nver = facemodel.idBase.shape[0] / 3
-ntri = facemodel.tri.shape[0]
-n_shape_para = facemodel.idBase.shape[1]
-n_exp_para = facemodel.exBase.shape[1]
-n_tex_para = facemodel.texBase.shape[1]
+face_model = BFM(opt.BFM_model_path)
+nver = face_model.idBase.shape[0] / 3
+ntri = face_model.tri.shape[0]
+n_shape_para = face_model.idBase.shape[1]
+n_exp_para = face_model.exBase.shape[1]
+n_tex_para = face_model.texBase.shape[1]
 
-kpt_ind = facemodel.key_points
-triangles = facemodel.tri
+kpt_ind = face_model.key_points
+triangles = face_model.tri
 
-facemodel.sp = idparams
-facemodel.tex = texparams
-facemodel.gamma = gammaparams
+face_model.sp = idparams
+face_model.tex = texparams
+face_model.gamma = gamma_params
 
-examplename = net_params.split('/')[-1].replace('.npz', '')
-save_folder = opt.outpath + examplename
+example_name = net_params.split('/')[-1].replace('.npz', '')
+save_folder = opt.outpath + example_name
 if not os.path.exists(save_folder):
     os.makedirs(save_folder)
 
+n = netparams.shape[0] // 10
+
 for i in range(1, netparams.shape[0] + 1):
-    print(i)
+    if not i % n:
+        print(i)
+
     chi_next = netparams[i - 1, :].copy()
-    if i > 3 and i < netparams.shape[0] - 2:
+    if 3 < i < netparams.shape[0] - 2:
         for j in range(6):
             chi_next[j] = np.sum([netparams[i - 3, j], netparams[i - 2, j], netparams[i - 1, j], netparams[i, j],
                                   netparams[i + 1, j]] * gaosifilter)
-    image = render(facemodel, chi_next).astype(np.uint8)
-    io.imsave(os.path.join(save_folder, str("%06d" % (i)) + '.jpg'), image)
+    image = render(face_model, chi_next).astype(np.uint8)
+    io.imsave(os.path.join(save_folder, str("%06d" % i) + '.jpg'), image)

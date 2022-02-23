@@ -25,7 +25,7 @@ npz_paths = [opt.npzpath]
 cvs_paths = [opt.cvspath]
 
 batch_size = 512
-epochs = 20
+epochs = 21
 
 device = torch.device('cuda')
 torch.manual_seed(1234)

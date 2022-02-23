@@ -1,7 +1,7 @@
 import time
 from collections import OrderedDict
 from options.train_options import TrainOptions
-from data.data_loader import CreateDataLoader
+from data.data_loader import create_data_loader
 from models.models import create_model
 import util.util as util
 from util.visualizer import Visualizer
@@ -29,7 +29,7 @@ if opt.debug:
     opt.max_dataset_size = 50
 
 # TODO: Create A New DataLoader that loads two consecutive pose/frame pairs
-data_loader = CreateDataLoader(opt)
+data_loader = create_data_loader(opt)
 dataset = data_loader.load_data()
 dataset_size = len(data_loader)
 print('#training images = %d' % dataset_size)

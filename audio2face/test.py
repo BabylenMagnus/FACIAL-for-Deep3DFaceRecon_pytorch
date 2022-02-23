@@ -26,35 +26,35 @@ for audio_path in audio_list:
 
     processed_audio = pickle.load(open(audio_path, 'rb'), encoding=' iso-8859-1')
 
-    modelgen = TfaceGAN().cuda()
+    model_gen = TfaceGAN().cuda()
 
-    modelgen.load_state_dict(torch.load(opt.checkpath))
-    modelgen.eval()
+    model_gen.load_state_dict(torch.load(opt.checkpath))
+    model_gen.eval()
 
     processed_audio = torch.Tensor(processed_audio)
-    audioname = audio_path.split('/')[-1].replace('.pkl', '')
+    audio_name = audio_path.split('/')[-1].replace('.pkl', '')
 
-    faceparams = np.zeros((processed_audio.shape[0], num_params), float)
+    face_params = np.zeros((processed_audio.shape[0], num_params), float)
 
-    frames_out_path = os.path.join(out_path, audioname + '.npz')
-    firstpose = torch.zeros([1, num_params], dtype=torch.float32).unsqueeze(0)
+    frames_out_path = os.path.join(out_path, audio_name + '.npz')
+    first_pose = torch.zeros([1, num_params], dtype=torch.float32).unsqueeze(0)
 
     with torch.no_grad():
         for i in range(0, processed_audio.shape[0] - 127, 127):
 
             audio = processed_audio[i:i + 128, :, :].unsqueeze(0).cuda()
 
-            _faceparam = modelgen(audio, firstpose.cuda())
+            face_param = model_gen(audio, first_pose.cuda())
 
-            firstpose = _faceparam[:, 127:128, :]
-            faceparams[i:i + 128, :] = _faceparam[0, :, :].cpu().numpy()
+            first_pose = face_param[:, 127:128, :]
+            face_params[i:i + 128, :] = face_param[0, :, :].cpu().numpy()
 
             # last audio sequence
             if i + 127 >= processed_audio.shape[0] - 127:
                 j = processed_audio.shape[0] - 128
                 audio = processed_audio[j:j + 128, :, :].unsqueeze(0).cuda()
-                firstpose = _faceparam[:, j - i:j - i + 1, :]
-                _faceparam = modelgen(audio, firstpose.cuda())
-                faceparams[j:j + 128, :] = _faceparam[0, :, :].cpu().numpy()
+                first_pose = face_param[:, j - i:j - i + 1, :]
+                face_param = model_gen(audio, first_pose.cuda())
+                face_params[j:j + 128, :] = face_param[0, :, :].cpu().numpy()
 
-        np.savez(frames_out_path, face=faceparams)
+        np.savez(frames_out_path, face=face_params)

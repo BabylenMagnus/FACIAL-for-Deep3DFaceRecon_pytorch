@@ -2,14 +2,14 @@ import numpy as np
 from PIL import Image
 from scipy.io import loadmat, savemat
 from array import array
+import os
 
 
 # define face_model for reconstruction
 class BFM:
-    def __init__(self):
-        model_path = '/content/FACIAL/face_render/BFM/BFM_model_front.mat'
-        model = loadmat(model_path)
-        self.expEV = np.loadtxt('/content/FACIAL/face_render/BFM/std_exp.txt')
+    def __init__(self, model_path='/content/FACIAL/face_render/BFM/'):
+        model = loadmat(os.path.join(model_path, 'BFM_model_front.mat'))
+        self.expEV = np.loadtxt(os.path.join(model_path, 'std_exp.txt'))
         self.mean_shape = model['meanshape']  # mean face shape
         self.idBase = model['idBase']  # identity basis
         self.exBase = model['exBase']  # expression basis

@@ -2,8 +2,7 @@ import torch.utils.data
 from data.base_data_loader import BaseDataLoader
 
 
-def CreateDataset(opt):
-    dataset = None
+def create_dataset(opt):
     from data.aligned_pair_dataset import AlignedPairDataset
     dataset = AlignedPairDataset()
 
@@ -11,13 +10,14 @@ def CreateDataset(opt):
     dataset.initialize(opt)
     return dataset
 
+
 class CustomDatasetDataLoader(BaseDataLoader):
     def name(self):
         return 'CustomDatasetDataLoader'
 
     def initialize(self, opt):
         BaseDataLoader.initialize(self, opt)
-        self.dataset = CreateDataset(opt)
+        self.dataset = create_dataset(opt)
         self.dataloader = torch.utils.data.DataLoader(
             self.dataset,
             batch_size=opt.batchSize,
